@@ -32,6 +32,9 @@ class Config:
     )
     EDGAR_DOWNLOAD_DIR = os.getenv("EDGAR_DOWNLOAD_DIR", "./edgar_filings")
 
+    # ── Market Bridge (sec-api.io) ───────────────────────
+    SEC_API_KEY = os.getenv("SEC_API_KEY", "")
+
     # ── Gradio ───────────────────────────────────────────
     GRADIO_SHARE = os.getenv("GRADIO_SHARE", "false").lower() == "true"
     GRADIO_SERVER_PORT = int(os.getenv("GRADIO_SERVER_PORT", "7860"))

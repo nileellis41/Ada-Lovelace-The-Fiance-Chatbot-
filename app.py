@@ -139,6 +139,70 @@ def fetch_news(ticker: str):
 
 
 # ═════════════════════════════════════════════════════════
+#  Deep Analysis handlers (Market Bridge pipeline)
+# ═════════════════════════════════════════════════════════
+# Store the last result so the inspector can show chunks + JSON
+_last_pipeline_result = None
+
+
+def run_deep_analysis(ticker: str, analysis_type: str, custom_question: str):
+    global _last_pipeline_result
+    ticker = ticker.strip().upper()
+    if not ticker:
+        return "⚠️ Enter a ticker symbol.", "", ""
+    try:
+        from market_bridge.core.pipeline import MarketBridgePipeline
+        pipeline = MarketBridgePipeline()
+
+        if analysis_type == "Earnings (8-K)":
+            result = pipeline.analyze_earnings(ticker)
+        elif analysis_type == "Annual (10-K)":
+            result = pipeline.analyze_annual(ticker)
+        elif analysis_type == "Quarterly (10-Q)":
+            result = pipeline.analyze_quarterly(ticker)
+        else:  # Custom Query
+            if not custom_question.strip():
+                return "⚠️ Enter a question for custom analysis.", "", ""
+            filing_type = "10-K"
+            if "10-q" in custom_question.lower() or "quarterly" in custom_question.lower():
+                filing_type = "10-Q"
+            elif "8-k" in custom_question.lower() or "earnings" in custom_question.lower():
+                filing_type = "8-K"
+            result = pipeline.custom_query(ticker, custom_question, filing_type)
+
+        _last_pipeline_result = result
+
+        a = result.analysis
+        f = result.filing
+        summary_md = f"""## {ticker} — {analysis_type}
+
+**Signal:** `{a.signal.upper()}` | **Conviction:** `{a.conviction.upper()}`
+**Filing Date:** {f.filed_at if f else 'N/A'} | **Period:** {f.period_of_report if f else 'N/A'}
+**Chunks analyzed:** {a.chunks_used} | **Model:** {a.model}
+
+---
+
+{a.summary}
+"""
+        import json
+        raw_json = json.dumps(result.to_dict(), indent=2)
+
+        chunks_lines = []
+        for i, chunk in enumerate(result.chunks, 1):
+            chunks_lines.append(
+                f"**Chunk {i}** — type: `{chunk.chunk_type}` | section: `{chunk.section_label}` | {len(chunk.text)} chars\n"
+                f"> {chunk.text[:300].strip()}{'...' if len(chunk.text) > 300 else ''}\n"
+            )
+        chunks_md = "\n".join(chunks_lines) if chunks_lines else "_No chunks available._"
+
+        return summary_md, chunks_md, raw_json
+
+    except Exception as e:
+        logger.error(f"Deep analysis error: {e}", exc_info=True)
+        return f"⚠️ Error: {e}", "", ""
+
+
+# ═════════════════════════════════════════════════════════
 #  Custom CSS (dark theme, clean finance aesthetic)
 # ═════════════════════════════════════════════════════════
 # (CSS is inline in the HTML block below)
@@ -293,7 +357,51 @@ def build_app() -> gr.Blocks:
                 quote_btn.click(fetch_quote, [quote_ticker], quote_output)
                 news_btn.click(fetch_news, [news_ticker], news_output)
 
-            # ━━━━━ TAB 5: CONFIG ━━━━━━━━━━━━━━━━━━━━━━━━
+            # ━━━━━ TAB 5: DEEP ANALYSIS ━━━━━━━━━━━━━━━━━
+            with gr.Tab("🔬 Deep Analysis", id="deep_analysis"):
+                gr.Markdown("### Market Bridge — Structured Filing Analysis")
+                gr.Markdown(
+                    "Run the full Market Bridge pipeline: SEC filing → chunking → Claude synthesis → structured JSON signal."
+                )
+
+                with gr.Row():
+                    da_ticker = gr.Textbox(label="Ticker", placeholder="e.g. AAPL", scale=1)
+                    da_type = gr.Radio(
+                        choices=["Earnings (8-K)", "Annual (10-K)", "Quarterly (10-Q)", "Custom Query"],
+                        value="Earnings (8-K)",
+                        label="Analysis Type",
+                        scale=3,
+                    )
+
+                da_question = gr.Textbox(
+                    label="Custom Question (required for Custom Query)",
+                    placeholder="e.g. What are the main AI revenue drivers?",
+                    visible=False,
+                )
+
+                da_type.change(
+                    fn=lambda t: gr.update(visible=(t == "Custom Query")),
+                    inputs=da_type,
+                    outputs=da_question,
+                )
+
+                da_run_btn = gr.Button("Run Analysis", variant="primary")
+
+                with gr.Tabs():
+                    with gr.Tab("Analysis"):
+                        da_summary = gr.Markdown(label="Result")
+                    with gr.Tab("Chunks"):
+                        da_chunks = gr.Markdown(label="Chunk Inspector")
+                    with gr.Tab("Raw JSON"):
+                        da_json = gr.Code(language="json", label="Structured Output")
+
+                da_run_btn.click(
+                    run_deep_analysis,
+                    inputs=[da_ticker, da_type, da_question],
+                    outputs=[da_summary, da_chunks, da_json],
+                )
+
+            # ━━━━━ TAB 6: CONFIG ━━━━━━━━━━━━━━━━━━━━━━━━
             with gr.Tab("⚙️ Config", id="config"):
                 gr.Markdown("### Configuration Status")
                 api_status = []
