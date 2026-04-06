@@ -1,6 +1,6 @@
 # ◆ Finance Chatbot
 
-RAG-powered financial research assistant with live data integration.
+Ada Lovelace is a RAG-powered AI finance chatbot that connects Claude's reasoning to live financial data pipelines. It ingests SEC filings (EDGAR 10-K/10-Q), macro indicators (FRED), and market data (Polygon.io) into a ChromaDB vector store, then uses intent detection to dynamically assemble grounded context for each query — so responses cite real numbers, not hallucinated ones. Built on Gradio with streaming chat, a document ingestion panel, and a macro dashboard, Ada is designed as the conversational interface layer for your broader platform architecture, with a native hook point for Access Alpha regime labels and Market Bridge signal routing. Think of it as your research desk analyst that actually checks the tape before it talks.
 
 ## Architecture
 
