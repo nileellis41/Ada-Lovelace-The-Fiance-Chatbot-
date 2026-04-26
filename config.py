@@ -12,8 +12,8 @@ load_dotenv()
 class Config:
     # ── LLM ──────────────────────────────────────────────
     ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-    LLM_MODEL = os.getenv("LLM_MODEL", "claude-sonnet-4-20250514")
-    LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "4096"))
+    LLM_MODEL = os.getenv("LLM_MODEL", "claude-sonnet-4-6")
+    LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "16384"))
 
     # ── Finance Data APIs ────────────────────────────────
     FRED_API_KEY = os.getenv("FRED_API_KEY", "")
@@ -38,3 +38,4 @@ class Config:
     # ── Gradio ───────────────────────────────────────────
     GRADIO_SHARE = os.getenv("GRADIO_SHARE", "false").lower() == "true"
     GRADIO_SERVER_PORT = int(os.getenv("GRADIO_SERVER_PORT", "7860"))
+    GRADIO_SERVER_NAME = os.getenv("GRADIO_SERVER_NAME", "0.0.0.0")

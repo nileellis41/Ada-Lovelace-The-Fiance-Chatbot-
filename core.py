@@ -432,6 +432,32 @@ class FinanceAgent:
         n = self.vector_store.ingest_text(text, metadata={"source": source})
         return f"Ingested {n} chunks from {source}."
 
+    def ingest_pdf(self, path: str) -> str:
+        """Parse and ingest a research PDF into the knowledge base."""
+        from pdf_parser import PDFParser, format_summary_text
+        parser = PDFParser()
+        parsed = parser.parse(path)
+
+        if not parsed.chunks:
+            return f"No extractable content found in {parsed.source}."
+
+        n = self.vector_store.ingest_chunks(
+            parsed.chunks,
+            base_metadata={
+                "source": parsed.source,
+                "source_type": "pdf",
+                "format": parsed.format_detected,
+                "extraction_method": parsed.extraction_method,
+                "page_count": str(parsed.page_count),
+            },
+        )
+        summary = format_summary_text(parsed)
+        return (
+            f"Ingested {n} chunks from {parsed.source} "
+            f"({parsed.page_count} pages, {parsed.extraction_method} extraction).\n\n"
+            f"{summary}"
+        )
+
     # ── Reset ────────────────────────────────────────────
     def clear_history(self):
         self.conversation = []

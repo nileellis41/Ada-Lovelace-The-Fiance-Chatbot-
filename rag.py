@@ -10,7 +10,6 @@ import re
 from typing import Optional
 
 import chromadb
-from chromadb.config import Settings
 
 from config import Config
 
@@ -45,11 +44,7 @@ class VectorStore:
         self.persist_dir = persist_dir or Config.CHROMA_PERSIST_DIR
         self.collection_name = collection_name or Config.CHROMA_COLLECTION
 
-        self.client = chromadb.Client(Settings(
-            is_persistent=True,
-            persist_directory=self.persist_dir,
-            anonymized_telemetry=False,
-        ))
+        self.client = chromadb.PersistentClient(path=self.persist_dir)
         self.collection = self.client.get_or_create_collection(
             name=self.collection_name,
             metadata={"hnsw:space": "cosine"},
@@ -98,6 +93,27 @@ class VectorStore:
                 "filing_date": date,
             },
         )
+
+    def ingest_chunks(self, chunks: list, base_metadata: Optional[dict] = None) -> int:
+        """Ingest pre-chunked objects that expose .text and .as_metadata(). Skips re-chunking."""
+        if not chunks:
+            return 0
+        base_metadata = base_metadata or {}
+
+        ids = []
+        documents = []
+        metadatas = []
+        for i, chunk in enumerate(chunks):
+            ids.append(f"{_doc_id(chunk.text)}_{i}")
+            documents.append(chunk.text)
+            metadatas.append({**base_metadata, **chunk.as_metadata(), "chunk_index": i})
+
+        self.collection.upsert(ids=ids, documents=documents, metadatas=metadatas)
+        logger.info(
+            f"Ingested {len(chunks)} pre-chunked documents "
+            f"(source: {base_metadata.get('source', 'unknown')})"
+        )
+        return len(chunks)
 
     # ── Query ────────────────────────────────────────────
     def query(

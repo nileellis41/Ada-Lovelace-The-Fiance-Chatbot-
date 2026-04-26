@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Bash(python -c \"import chromadb; c = chromadb.PersistentClient\\(path='./test_chroma'\\); col = c.get_or_create_collection\\('test'\\); col.upsert\\(ids=['1'], documents=['hello']\\); print\\('count:', col.count\\(\\)\\); import shutil; shutil.rmtree\\('./test_chroma'\\)\")"
+    ]
+  }
+}

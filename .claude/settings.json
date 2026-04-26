@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"from app import build_app; build_app\\(\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import gradio; print\\(gradio.__version__\\)\")",
+      "Bash(pip show *)"
+    ]
+  }
+}

@@ -7,7 +7,6 @@ Launch:  python app.py
 """
 import logging
 import os
-import sys
 
 import gradio as gr
 
@@ -80,13 +79,16 @@ def ingest_text_handler(text: str, source_label: str):
 
 def ingest_file_handler(file):
     if file is None:
-        return "⚠️ Upload a text file."
+        return "⚠️ Upload a file."
     try:
-        with open(file.name, "r", encoding="utf-8", errors="replace") as f:
-            text = f.read()
         agent = get_agent()
         filename = os.path.basename(file.name)
-        result = agent.ingest_text(text, source=filename)
+        if filename.lower().endswith(".pdf"):
+            result = agent.ingest_pdf(file.name)
+        else:
+            with open(file.name, "r", encoding="utf-8", errors="replace") as f:
+                text = f.read()
+            result = agent.ingest_text(text, source=filename)
         stats = agent.knowledge_base_stats()
         return f"{result}\n{stats}"
     except Exception as e:
@@ -106,7 +108,7 @@ def fetch_macro_snapshot():
         fred = FREDClient()
         snap = fred.macro_snapshot()
         rows = []
-        for key, info in snap.items():
+        for _, info in snap.items():
             val = info["value"]
             rows.append([info["label"], info["series_id"], f"{val:.2f}" if val is not None else "N/A"])
         return rows
@@ -315,7 +317,7 @@ def build_app() -> gr.Blocks:
                 with gr.Row():
                     with gr.Column():
                         gr.Markdown("**File Upload**")
-                        file_upload = gr.File(label="Upload .txt / .md / .csv", file_types=[".txt", ".md", ".csv"])
+                        file_upload = gr.File(label="Upload .txt / .md / .csv / .pdf", file_types=[".txt", ".md", ".csv", ".pdf"])
                         file_btn = gr.Button("Ingest File", variant="primary")
                         file_output = gr.Textbox(label="Result", lines=3, interactive=False)
 
@@ -335,7 +337,6 @@ def build_app() -> gr.Blocks:
                 macro_btn = gr.Button("Fetch Macro Snapshot", variant="primary")
                 macro_table = gr.Dataframe(
                     headers=["Indicator", "Series ID", "Latest Value"],
-                    column_count=3,
                     interactive=False,
                 )
                 macro_btn.click(fetch_macro_snapshot, outputs=macro_table)
@@ -445,6 +446,7 @@ def build_app() -> gr.Blocks:
 if __name__ == "__main__":
     app = build_app()
     app.launch(
+        server_name=Config.GRADIO_SERVER_NAME,
         server_port=Config.GRADIO_SERVER_PORT,
         share=Config.GRADIO_SHARE,
         show_error=True,
